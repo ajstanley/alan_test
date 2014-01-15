@@ -1,0 +1,28 @@
+<?php
+
+function alan_test_menu() {
+  $items['islandora/emic/collection'] = array(
+    'page callback' => 'build_MADS',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => array(ISLANDORA_CRITICAL_EDITION_ADVANCED_READ),
+  );
+  return $items;
+}
+
+function build_mads() {
+  $doc = new DomDocument('1.0', 'UTF-8');
+  $doc->preserveWhiteSpace = false;
+  $doc->formatOutput = true;
+  $doc->createElementNS($namespaceURI, 'mads');
+
+  $xml = new DomDocument('1.0', 'UTF-8');
+  $xml->preserveWhiteSpace = false;
+  $xml->formatOutput = true;
+  $root = $xml->createElementNS(null, 'root');
+  $xml->appendChild($root);
+  $x = $xml->createElementNS('myNS', 'p:x', 'test');
+  $root->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:p', 'myNS');
+  $root->appendChild($x);
+  return $doc->savexml();
+}
