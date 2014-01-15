@@ -10,7 +10,55 @@ function alan_test_menu() {
   return $items;
 }
 
-function build_mads() {
+function build_all_mads($path) {
+  $scholars = read_csv($path);
+  foreach ($scholars as $scholar) {
+    build_mads($scholar);
+  }
+}
+
+function read_csv($path) {
+  ini_set("auto_detect_line_endings", "1");
+  $scolars = array();
+  if (($handle = fopen($path, "r")) !== FALSE) {
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+      if (!isset($header)) {
+        $header = $data;
+        continue;
+      }
+      for ($counter = 0; $c < count($data); $$counter++) {
+        $scholar[$header[$counter]] = $data[$counter];
+      }
+      $scholars[] = $scholar;
+    }
+    fclose($handle);
+  }
+  return $scholars;
+}
+
+function build_mads($scholar) {
+  if (isset($scholar['SCHOLAR_NAME'])) {
+    $name['name'] = $scholar['SCHOLAR_NAME'];
+    if (isset($scholar['SCHOLAR_DATE'])) {
+      $name['date'] = $scholar['SCHOLAR_DATE'];
+    }
+  }
+  $address_fields = array(
+    'STREET1',
+    'STREET2',
+    'CITY',
+    'PROVINCE',
+    'STATE',
+    'COUNTRY',
+    'POSTAL_CODE',
+  );
+  $address = array();
+  foreach ($address_fields as $field) {
+    if (isset($scholar[$field])) {
+      $address[$field] = $scholar[$field];
+    }
+  }
+
   $xml = new DomDocument('1.0', 'UTF-8');
   $xml->preserveWhiteSpace = false;
   $xml->formatOutput = true;
@@ -18,28 +66,23 @@ function build_mads() {
   //root.
   $root = $xml->createElementNS($mads_uri, 'mads:mads');
   $xml->appendChild($root);
-  add_authority($xml, 'authority', "Some guy", '2012');
-  add_authority($xml, 'variant', "Some other guy", '2014');
+  if (isset($name)) {
+    add_authority($xml, 'authority', $name);
+  }
 
-  $address = array(
-    'street' => '123 Main Street',
-    'city' => 'Charlottetown',
-    'province' => 'PEI',
-    'country' => 'Canada',
-    'postcode' => 'C1A 2B3',
-  );
-  add_address($xml, $address);
-
+  if (count($address) > 0) {
+    add_address($xml, $address);
+  }
   $affiliation = array(
     'position' => 'Digital Humanities Specialist',
     'start' => 'August 2013',
-    'end' => 'Decembe 31, 2049',
+    'end' => 'December 31, 2049',
   );
   add_affiliation($xml, $affiliation);
-  return $xml->savexml();
+  print $xml->savexml();
 }
 
-function add_authority($xml, $type, $name, $date = NULL) {
+function add_authority($xml, $type, $name) {
   $mads_uri = "http://www.loc.gov/mads/v2";
   $root = $xml->documentElement;
   // authority.
@@ -51,11 +94,11 @@ function add_authority($xml, $type, $name, $date = NULL) {
   $name_node->setAttribute('type', 'personal');
   $authority->appendChild($name_node);
   //namePart
-  $name_part = $xml->createElementNS($mads_uri, 'mads:namePart', $name);
+  $name_part = $xml->createElementNS($mads_uri, 'mads:namePart', $name['name']);
   $name_node->appendChild($name_part);
   // date
-  if ($date) {
-    $name_date = $xml->createElementNS($mads_uri, 'mads:namePart', $date);
+  if (isset($name['date'])) {
+    $name_date = $xml->createElementNS($mads_uri, 'mads:namePart', $name['date']);
     $name_date->setAttribute('type', 'date');
     $name_node->appendChild($name_date);
   }
