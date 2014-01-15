@@ -26,7 +26,7 @@ function read_csv($path) {
         $header = $data;
         continue;
       }
-      for ($counter = 0; $c < count($data); $$counter++) {
+      for ($counter = 0; $counter < count($data); $counter++) {
         $scholar[$header[$counter]] = $data[$counter];
       }
       $scholars[] = $scholar;
@@ -52,12 +52,8 @@ function build_mads($scholar) {
     'COUNTRY',
     'POSTAL_CODE',
   );
-  $address = array();
-  foreach ($address_fields as $field) {
-    if (isset($scholar[$field])) {
-      $address[$field] = $scholar[$field];
-    }
-  }
+
+
 
   $xml = new DomDocument('1.0', 'UTF-8');
   $xml->preserveWhiteSpace = false;
@@ -69,16 +65,25 @@ function build_mads($scholar) {
   if (isset($name)) {
     add_authority($xml, 'authority', $name);
   }
-
+  $address = array();
+  foreach ($address_fields as $field) {
+    if (isset($scholar[$field])) {
+      $address[$field] = $scholar[$field];
+    }
+  }
   if (count($address) > 0) {
     add_address($xml, $address);
   }
-  $affiliation = array(
-    'position' => 'Digital Humanities Specialist',
-    'start' => 'August 2013',
-    'end' => 'December 31, 2049',
-  );
-  add_affiliation($xml, $affiliation);
+  if (isset($scholar['AFFILIATION'])) {
+    $affiliation['position'] = $scholar['AFFILIATION'];
+    if (isset($scholar['AFFILIATION_START']) && $scholar['AFFILIATION_START'] != '') {
+      $affiliation['start'] = $scholar['AFFILIATION_START'];
+    }
+    if (isset($scholar['AFFILIATION_END']) && $scholar['AFFILIATION_END'] != '') {
+      $affiliation['end'] = $scholar['AFFILIATION_END'];
+    }
+    add_affiliation($xml, $affiliation);
+  }
   print $xml->savexml();
 }
 
