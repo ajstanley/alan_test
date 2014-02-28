@@ -1,11 +1,11 @@
 <?php
 
 function alan_test_menu() {
-  $items['islandora/emic/collection'] = array(
-    'page callback' => 'build_MADS',
+  $items['islandora/mads/build'] = array(
+    'page callback' => 'build_all_mads',
     'type' => MENU_CALLBACK,
     'access callback' => 'user_access',
-    'access arguments' => array(ISLANDORA_CRITICAL_EDITION_ADVANCED_READ),
+    'access arguments' => array('ISLANDORA_CRITICAL_EDITION_ADVANCED_READ'),
   );
   return $items;
 }
@@ -139,5 +139,51 @@ function add_affiliation($xml, $affiliation_values) {
       $line->setAttribute('point', $point);
       $affiliation->appendChild($line);
     }
+  }
+}
+
+function alan_test_call() {
+  module_load_include('inc', 'islandora', 'includes/solution_packs');
+  $module = "islandora_audio";
+  if (module_exists($module)) {
+    $info = islandora_solution_packs_get_required_objects($module);
+    $objects_to_add = array();
+    foreach ($info['objects'] as $key => $candidate) {
+      $models = $candidate->models;
+      if (in_array('fedora-system:ContentModel-3.0', $candidate->models)) {
+        $objects_to_add[] = $candidate;
+      }
+    }
+    if (count($objects_to_add) > 0) {
+      foreach ($objects_to_add as $object_to_add) {
+        $old_object = islandora_object_load($object_to_add->id);
+        if ($old_object) {
+          $deleted = islandora_delete_object($old_object);
+          if (!$deleted) {
+
+            continue;
+          }
+        }
+        $new_object = islandora_add_object($object_to_add);
+        $verb = $deleted ? dt("Replaced") : dt("Added");
+        if ($new_object) {
+          drush_log("$verb " . $object_to_add->id . " - " . $object_to_add->label);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_CMODEL_PID_islandora_solr_object_result_alter().
+ */
+function alan_test_pack_packersplus_assembly_islandora_solr_object_result_alter(&$search_results, $query_processor) {
+  module_load_include('inc', 'packers_solution_pack', 'packers_solution_pack');
+  //$filter = packers_solution_pack_parse_contextual_filter_from_pid($search_results['solr_doc']['PID']);
+  if (isset($search_results['solr_doc']['RELS_EXT_has_serial_number_of_literal_ms']) && !empty($search_results['solr_doc']['RELS_EXT_has_serial_number_of_literal_ms'][0])) {
+    $search_results['object_url'] = 'assembly-serial-view/' . $filter;
+  }
+  else {
+    $search_results['object_url'] = 'assembly-purchase-order-view/' . $filter;
   }
 }
