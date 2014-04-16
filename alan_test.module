@@ -1,11 +1,14 @@
 <?php
 
 function alan_test_menu() {
-  $items['islandora/mads/build'] = array(
-    'page callback' => 'build_all_mads',
-    'type' => MENU_CALLBACK,
-    'access callback' => 'user_access',
-    'access arguments' => array('ISLANDORA_CRITICAL_EDITION_ADVANCED_READ'),
+  $items['islandora/forms/test'] = array(
+      'title' => 'Consolidation Test',
+      'description' => 'Test Consolidated form',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_consolidation_test_form'),
+      'file' => 'includes/form.test.inc',
+      'access arguments' => array('access content'),
   );
   return $items;
 }
@@ -19,7 +22,7 @@ function build_all_mads($path) {
 
 function read_csv($path) {
   ini_set("auto_detect_line_endings", "1");
-  $scolars = array();
+  $scholars = array();
   if (($handle = fopen($path, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
       if (!isset($header)) {
@@ -175,15 +178,67 @@ function alan_test_call() {
 }
 
 /**
- * Implements hook_CMODEL_PID_islandora_solr_object_result_alter().
+ * Implements hook_islandora_solr_results_alter().
  */
-function alan_test_pack_packersplus_assembly_islandora_solr_object_result_alter(&$search_results, $query_processor) {
+function alan_test_islandora_solr_results_alter_x(&$search_results, $query_processor) {
   module_load_include('inc', 'packers_solution_pack', 'packers_solution_pack');
-  //$filter = packers_solution_pack_parse_contextual_filter_from_pid($search_results['solr_doc']['PID']);
-  if (isset($search_results['solr_doc']['RELS_EXT_has_serial_number_of_literal_ms']) && !empty($search_results['solr_doc']['RELS_EXT_has_serial_number_of_literal_ms'][0])) {
-    $search_results['object_url'] = 'assembly-serial-view/' . $filter;
-  }
-  else {
-    $search_results['object_url'] = 'assembly-purchase-order-view/' . $filter;
+
+  $mappings = array(
+    'islandora:root' => '>Collections',
+    'packersPlus:Pressure_and_Shear_Data' => '>Pressure Tests',
+    'packersPlus:engineering_items' => '>Engineering Items',
+    'packersPlus:domestic_shipping_reports' => '>Domestic Shipping',
+    'packersPlus:international_shipping_reports' => '>International Shipping',
+    'packersPlus:scrap_requests' => '>Scrap Requests',
+    'packersPlus:tool_conversion_reports' => '>Tool Conversions',
+    'packersPlus:engineering_change_notices' => '>Engineering Changes',
+    'packersPlus:MTRs' => '>MTR Data',
+    'packersPlus:MTR_PDFs' => '>MTR PDFs',
+    'packersPlus:assembly_data_collection' => '>Assembly Data',
+    'packersPlus:miscellaneous_job_files' => '>Misc Job Files',
+    'packersPlus:domestic_jobs' => '>Domestic Jobs',
+    'packersPlus:sub_assembly_drawings' => '>Sub-Assemblies',
+    'packersPlus:quality_assurance_images' => '>QA Images',
+    'packersPlus:shift_tests' => '>Shift Tests',
+    'packersPlus:torque_tests' => '>Torque Tests',
+    'packersPlus:coordinate_measurements' => '>Coordinate Data',
+    'packersPlus:QC_NCRs' => '>QC NCRs',
+    'packersPlus:raw_material_NCRs' => '>RM NCRs',
+    'packersPlus:international_sales_orders' => '>International Orders',
+    'packersPlus:international_sales_quotes' => '>International Quotes',
+    // Ones not in Mark's list.
+    'packersPlus:sales_quotes' => '>Sales Quotes',
+    'packersPlus:part_birth_certificates' => '>Part Birth Certificates',
+    'packersPlus:purchasing_NCRs' => '>Purchasing NCRs',
+    'packersPlus:jobs' => '>Jobs',
+    'packersPlus:assembly_NCRs' => '>Assembly NCRs',
+    'packersPlus:birth_certificates' => '>Birth Certificates',
+    'packersPlus:assemblies' => '>Assemblies',
+    'packersPlus:international_jobs' => '>International Jobs',
+    'packersPlus:quality_assurance_collection' => '>Quality Assurance Collection',
+    'packersPlus:shipping_reports' => '>Shipping Reports',
+    'packersPlus:miscellaneous_jobs' => '>Miscellaneous Jobs',
+    'packersPlus:database_NCRs' => '>NCRs From database',
+    'packersPlus:faros' => '>Faro Arm Data',
+    'packersPlus:NCRs' => '>Non-Conformance Records',
+    'packersPlus:sales_documents' => '>Sales Documents',
+    'packersPlus:sales_orders' => '>Sales Orders',
+  );
+
+  foreach ($search_results as &$result) {
+    if ($result['solr_doc']) {
+      if (isset($result['solr_doc']['RELS_EXT_isMemberOfCollection_uri_ms'])) {
+        $raw_result = $result['solr_doc']['RELS_EXT_isMemberOfCollection_uri_ms'][0];
+        $parts = explode('/', $raw_result);
+        $collection_pid = end($parts);
+
+        if (isset($mappings[$collection_pid])) {
+          $result['solr_doc']['RELS_EXT_isMemberOfCollection_uri_ms'][0] = $mappings[$collection_pid];
+        }
+        else {
+           $result['solr_doc']['RELS_EXT_isMemberOfCollection_uri_ms'][0] = $collection_pid;
+        }
+      }
+    }
   }
 }
